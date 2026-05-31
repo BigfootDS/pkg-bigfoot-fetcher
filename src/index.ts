@@ -1,15 +1,88 @@
-// import dotenv from "dotenv";
-// dotenv.config();
-import Bowser from "bowser"; // TypeScript
+import Bowser from "bowser";
 import MyUaParser from "my-ua-parser";
-import os from "node:os";
 
-// Good:
-// console.log(process.env.npm_package_config_bigfootds_game);
-// Junk:
-// console.log(process.env.npm_package_bigfootds_game);
-// console.log(process.env.npm_package_testo);
-// console.log(process.env.npm_package_scripts_start)
+export const BIGFOOT_FETCHER_HEADER_NAMES = [
+    "productName",
+    "productVersion",
+    "browserName",
+    "browserVersion",
+    "browserEngineName",
+    "browserEngineVersion",
+    "osName",
+    "osVersion",
+    "osVersionName",
+    "platformType",
+    "platformName",
+] as const;
+
+export type BigfootFetcherHeaderName = typeof BIGFOOT_FETCHER_HEADER_NAMES[number];
+
+const PLATFORM_TYPE_ENV_KEYS = [
+    "npm_package_config_bigfootds_platformType",
+    "npm_package_platformType",
+    "platformType",
+    "PLATFORMTYPE",
+    "PLATFORM_TYPE",
+    "REACT_APP_PLATFORM_TYPE",
+    "REACT_APP_PLATFORMTYPE",
+    "VITE_PLATFORM_TYPE",
+    "VITE_PLATFORMTYPE",
+] as const;
+
+const PLATFORM_NAME_ENV_KEYS = [
+    "npm_package_config_bigfootds_platformName",
+    "npm_package_platformName",
+    "platformName",
+    "PLATFORMNAME",
+    "PLATFORM_NAME",
+    "REACT_APP_PLATFORM_NAME",
+    "REACT_APP_PLATFORMNAME",
+    "VITE_PLATFORM_NAME",
+    "VITE_PLATFORMNAME",
+] as const;
+
+const PRODUCT_NAME_ENV_KEYS = [
+    "npm_package_config_bigfootds_productName",
+    "npm_package_productName",
+    "productName",
+    "PRODUCTNAME",
+    "PRODUCT_NAME",
+    "REACT_APP_PRODUCT_NAME",
+    "REACT_APP_PRODUCTNAME",
+    "VITE_PRODUCT_NAME",
+    "VITE_PRODUCTNAME",
+] as const;
+
+const PRODUCT_VERSION_ENV_KEYS = [
+    "npm_package_config_bigfootds_productVersion",
+    "npm_package_productVersion",
+    "productVersion",
+    "PRODUCTVERSION",
+    "PRODUCT_VERSION",
+    "REACT_APP_PRODUCT_VERSION",
+    "REACT_APP_PRODUCTVERSION",
+    "VITE_PRODUCT_VERSION",
+    "VITE_PRODUCTVERSION",
+    "npm_package_version",
+] as const;
+
+const NODE_OS_NAMES: Record<string, string> = {
+    aix: "AIX",
+    darwin: "Darwin",
+    freebsd: "FreeBSD",
+    linux: "Linux",
+    openbsd: "OpenBSD",
+    sunos: "SunOS",
+    win32: "Windows_NT",
+};
+
+interface NodeReportHeader {
+    osName?: string;
+    osRelease?: string;
+    osVersion?: string;
+}
+
+let cachedNodeReportHeader: NodeReportHeader | null | undefined;
 
 
 /**
@@ -22,51 +95,63 @@ import os from "node:os";
  * @param {RequestInit} [options] Fetch options. See {@link https://developer.mozilla.org/en-US/docs/Web/API/RequestInit RequestInit} at MDN Web Docs for more info.
  * @returns The executing `fetch` function configured with standard BigfootDS-relevant headers.
  */
-export function fetcher(requestTarget: RequestInfo | URL, options?: RequestInit){
+export function fetcher(requestTarget: RequestInfo | URL, options: RequestInit = {}): Promise<Response> {
+    const headers = createHeaders(requestTarget, options.headers);
+    const bigfootDSConfigData = isBrowserRuntime()
+        ? getInfoViaBrowser()
+        : getInfoViaNode();
 
-    // Initialise a headers instance using the provided argument data if it's available.
-	const defaultHeaders: HeadersInit = options ? new Headers(options.headers) : new Headers();
+    for (const key of BIGFOOT_FETCHER_HEADER_NAMES) {
+        const value = bigfootDSConfigData[key];
 
-
-    // Prep to start assigning our BigfootDS-relevant headers.
-    let bigfootDSConfigData: BigfootDSConfig = {}
-
-    // Determine how this function is running: is it in the browser, or in a NodeJS environment?
-    if (typeof self === 'undefined') { 
-        /* neither web window nor web worker, must be node environment */ 
-        bigfootDSConfigData = getInfoViaNode();
-    } else {
-        // global "window" object is available, must be a browser
-        bigfootDSConfigData = getInfoViaBrowser();
-    }
-
-
-    // Once the data has been prepared on to `bigfootDSConfigData`, loop through it and apply it to the fetch header configuration.
-    (Object.keys(bigfootDSConfigData) as Array<keyof BigfootDSConfig>).forEach((key) => {
-        if (bigfootDSConfigData[key]){
-            defaultHeaders.set(key, bigfootDSConfigData[key]);
+        if (value !== undefined && value !== "") {
+            headers.set(key, value);
         }
-    });
-
-    // Make a local copy of the provided fetch options for easier, safe modifications.
-    // Use this to apply our headers safely.
-    let localOptions = options ? options : {headers: defaultHeaders};
-    if (options) {
-        localOptions.headers = {...options.headers, ...defaultHeaders}
     }
 
-    // Finally, the fetch is ready to call with our custom headers!
-	return fetch(requestTarget, localOptions);
+    return fetch(requestTarget, {
+        ...options,
+        headers,
+    });
 }
 
+function createHeaders(requestTarget: RequestInfo | URL, optionHeaders: HeadersInit | undefined): Headers {
+    const headers = new Headers(
+        isRequest(requestTarget) ? requestTarget.headers : undefined
+    );
 
+    if (optionHeaders !== undefined) {
+        new Headers(optionHeaders).forEach((value, key) => {
+            headers.set(key, value);
+        });
+    }
 
-function getInfoViaBrowser(){
-    const browser = Bowser.getParser(window.navigator.userAgent);
+    return headers;
+}
+
+function isRequest(value: RequestInfo | URL): value is Request {
+    return typeof Request !== "undefined" && value instanceof Request;
+}
+
+function isNodeRuntime(): boolean {
+    try {
+        return typeof process !== "undefined" && process.versions?.node !== undefined;
+    } catch {
+        return false;
+    }
+}
+
+function isBrowserRuntime(): boolean {
+    return typeof window !== "undefined" || (typeof self !== "undefined" && !isNodeRuntime());
+}
+
+function getInfoViaBrowser(): BigfootDSConfig {
+    const userAgent = globalThis.navigator?.userAgent ?? "";
+    const browser = Bowser.getParser(userAgent);
     const bowserResult = browser.getResult();
-    const userAgentParsed = MyUaParser(window.navigator.userAgent);
+    const userAgentParsed = MyUaParser(userAgent);
 
-    let result: BigfootDSConfig = {
+    const result: BigfootDSConfig = {
         browserEngineName: 
             bowserResult.engine.name ||
             userAgentParsed.engine.name,
@@ -89,103 +174,85 @@ function getInfoViaBrowser(){
             userAgentParsed.os.version || 
             bowserResult.os.versionName,
         platformType: 
-            process.env.npm_package_config_bigfootds_platformType ||
-            process.env.npm_package_platformType ||
-            process.env.platformType || 
-            process.env.PLATFORMTYPE || 
-            process.env.PLATFORM_TYPE || 
-            process.env.REACT_APP_PLATFORM_TYPE || 
-            process.env.REACT_APP_PLATFORMTYPE ||
-            process.env.VITE_PLATFORM_TYPE || 
-            process.env.VITE_PLATFORMTYPE ||
+            readEnv(PLATFORM_TYPE_ENV_KEYS) ||
             bowserResult.platform.type,
         platformName:
-            process.env.npm_package_config_bigfootds_platformName ||
-            process.env.npm_package_platformName ||
-            process.env.platformName || 
-            process.env.PLATFORMNAME || 
-            process.env.PLATFORM_NAME || 
-            process.env.REACT_APP_PLATFORM_NAME || 
-            process.env.REACT_APP_PLATFORMNAME ||
-            process.env.VITE_PLATFORM_NAME || 
-            process.env.VITE_PLATFORMNAME,
+            readEnv(PLATFORM_NAME_ENV_KEYS),
         productName:
-            process.env.npm_package_config_bigfootds_productName ||
-            process.env.npm_package_productName ||
-            process.env.productName || 
-            process.env.PRODUCTNAME || 
-            process.env.PRODUCT_NAME || 
-            process.env.REACT_APP_PRODUCT_NAME || 
-            process.env.REACT_APP_PRODUCTNAME ||
-            process.env.VITE_PRODUCT_NAME || 
-            process.env.VITE_PRODUCTNAME,
+            readEnv(PRODUCT_NAME_ENV_KEYS),
         productVersion:
-            process.env.npm_package_config_bigfootds_productVersion ||
-            process.env.npm_package_productVersion ||
-            process.env.productVersion || 
-            process.env.PRODUCTVERSION || 
-            process.env.PRODUCT_VERSION || 
-            process.env.REACT_APP_PRODUCT_VERSION || 
-            process.env.REACT_APP_PRODUCTVERSION ||
-            process.env.VITE_PRODUCT_VERSION || 
-            process.env.VITE_PRODUCTVERSION ||
-            process.env.npm_package_version,
+            readEnv(PRODUCT_VERSION_ENV_KEYS),
     }
 
     return result;
 }
 
-function getInfoViaNode(){
+function getInfoViaNode(): BigfootDSConfig {
+    const platform = readProcessPlatform();
+    const reportHeader = readProcessReportHeader();
 
-    let result: BigfootDSConfig = {
+    const result: BigfootDSConfig = {
         osName: 
-            os.type(),
-        osVersion: 
-            os.release(),
+            reportHeader?.osName ||
+            (platform === undefined ? undefined : NODE_OS_NAMES[platform] ?? platform),
+        osVersion:
+            reportHeader?.osRelease,
+        osVersionName:
+            reportHeader?.osVersion,
         platformType: 
-            process.env.npm_package_config_bigfootds_platformType ||
-            process.env.npm_package_platformType ||
-            process.env.platformType || 
-            process.env.PLATFORMTYPE || 
-            process.env.PLATFORM_TYPE || 
-            process.env.REACT_APP_PLATFORM_TYPE || 
-            process.env.REACT_APP_PLATFORMTYPE ||
-            process.env.VITE_PLATFORM_TYPE || 
-            process.env.VITE_PLATFORMTYPE,
+            readEnv(PLATFORM_TYPE_ENV_KEYS),
         platformName:
-            process.env.npm_package_config_bigfootds_platformName ||
-            process.env.npm_package_platformName ||
-            process.env.platformName || 
-            process.env.PLATFORMNAME || 
-            process.env.PLATFORM_NAME || 
-            process.env.REACT_APP_PLATFORM_NAME || 
-            process.env.REACT_APP_PLATFORMNAME ||
-            process.env.VITE_PLATFORM_NAME || 
-            process.env.VITE_PLATFORMNAME,
+            readEnv(PLATFORM_NAME_ENV_KEYS),
         productName:
-            process.env.npm_package_config_bigfootds_productName ||
-            process.env.npm_package_productName ||
-            process.env.productName || 
-            process.env.PRODUCTNAME || 
-            process.env.PRODUCT_NAME || 
-            process.env.REACT_APP_PRODUCT_NAME || 
-            process.env.REACT_APP_PRODUCTNAME ||
-            process.env.VITE_PRODUCT_NAME || 
-            process.env.VITE_PRODUCTNAME,
+            readEnv(PRODUCT_NAME_ENV_KEYS),
         productVersion:
-            process.env.npm_package_config_bigfootds_productVersion ||
-            process.env.npm_package_productVersion ||
-            process.env.productVersion || 
-            process.env.PRODUCTVERSION || 
-            process.env.PRODUCT_VERSION || 
-            process.env.REACT_APP_PRODUCT_VERSION || 
-            process.env.REACT_APP_PRODUCTVERSION ||
-            process.env.VITE_PRODUCT_VERSION || 
-            process.env.VITE_PRODUCTVERSION ||
-            process.env.npm_package_version,
+            readEnv(PRODUCT_VERSION_ENV_KEYS),
     }
 
     return result;
+}
+
+function readEnv(keys: readonly string[]): string | undefined {
+    for (const key of keys) {
+        const value = readProcessEnv(key);
+
+        if (value !== undefined && value !== "") {
+            return value;
+        }
+    }
+
+    return undefined;
+}
+
+function readProcessEnv(key: string): string | undefined {
+    try {
+        return process.env[key];
+    } catch {
+        return undefined;
+    }
+}
+
+function readProcessPlatform(): string | undefined {
+    try {
+        return process.platform;
+    } catch {
+        return undefined;
+    }
+}
+
+function readProcessReportHeader(): NodeReportHeader | undefined {
+    if (cachedNodeReportHeader !== undefined) {
+        return cachedNodeReportHeader ?? undefined;
+    }
+
+    try {
+        const report = process.report?.getReport?.() as { header?: NodeReportHeader } | undefined;
+        cachedNodeReportHeader = report?.header ?? null;
+    } catch {
+        cachedNodeReportHeader = null;
+    }
+
+    return cachedNodeReportHeader ?? undefined;
 }
 
 
