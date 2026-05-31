@@ -13,13 +13,7 @@ Note that this package, while publicly available and MIT-licensed, is **not** in
 Import the package as:
 
 ```js
-const {fetcher} = require("@bigfootds/bigfoot-fetcher");
-```
-
-Or:
-
-```js
-import {fetcher} from "@bigfootds/bigfoot-fetcher";
+import { fetcher } from "@bigfootds/bigfoot-fetcher";
 ```
 
 
@@ -170,6 +164,21 @@ Note that the headers above are populated by some default request headers as wel
 
 
 These headers are added to all fetch requests that use this package's fetcher function:
+
+```typescript
+import { BIGFOOT_FETCHER_HEADER_NAMES } from "@bigfootds/bigfoot-fetcher";
+
+const allowedHeaders = [
+  "Content-Type",
+  "Authorization",
+  ...BIGFOOT_FETCHER_HEADER_NAMES,
+];
+
+response.setHeader(
+  "Access-Control-Allow-Headers",
+  allowedHeaders.join(", ")
+);
+```
 
 
 ```typescript

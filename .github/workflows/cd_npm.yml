@@ -62,30 +62,30 @@ jobs:
     needs: [draft_release]
     name: Deploy package to NPM
     runs-on: ubuntu-latest
-    env:
-      npm_publish_token: ${{ secrets.NPM_PUBLISH_TOKEN }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.draft_release.outputs.semver_commit_hash }}
       
       - name: Set up NodeJS
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
       
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build TypeScript into JavaScript
-        run: npm run build
+      - name: Build and test package
+        run: npm test
 
-      - name: Build app
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.npm_publish_token }}
-          access: "public"
+      - name: Publish package to NPM
+        run: npm publish --access public
 
 
   
