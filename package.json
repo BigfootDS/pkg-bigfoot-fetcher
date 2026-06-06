@@ -24,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BigfootDS/Bigfoot-Fetcher.git"
+    "url": "git+https://github.com/BigfootDS/pkg-bigfoot-fetcher.git"
   },
   "keywords": [],
   "author": {
@@ -34,9 +34,9 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/BigfootDS/Bigfoot-Fetcher/issues"
+    "url": "https://github.com/BigfootDS/pkg-bigfoot-fetcher/issues"
   },
-  "homepage": "https://github.com/BigfootDS/Bigfoot-Fetcher#readme",
+  "homepage": "https://github.com/BigfootDS/pkg-bigfoot-fetcher#readme",
   "engines": {
     "node": ">=20.0.0"
   },
