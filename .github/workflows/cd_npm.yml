@@ -85,7 +85,7 @@ jobs:
         run: npm test
 
       - name: Publish package to NPM
-        run: npm publish --access public
+        run: npm publish --provenance --access public
 
 
   
