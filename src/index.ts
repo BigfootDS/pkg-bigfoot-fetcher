@@ -1,80 +1,20 @@
 import Bowser from "bowser";
 import MyUaParser from "my-ua-parser";
+import {
+    BIGFOOT_FETCHER_HEADER_NAMES,
+    BIGFOOT_FETCHER_NODE_OS_NAMES,
+    BIGFOOT_FETCHER_PLATFORM_NAME_ENV_KEYS,
+    BIGFOOT_FETCHER_PLATFORM_TYPE_ENV_KEYS,
+    BIGFOOT_FETCHER_PRODUCT_NAME_ENV_KEYS,
+    BIGFOOT_FETCHER_PRODUCT_VERSION_ENV_KEYS,
+} from "@bigfootds/bigfootds-shared-data/data/bigfootFetcher";
+import type {
+    BigfootDSConfig,
+    BigfootFetcherHeaderName,
+} from "@bigfootds/bigfootds-shared-data/data/bigfootFetcher";
 
-export const BIGFOOT_FETCHER_HEADER_NAMES = [
-    "productName",
-    "productVersion",
-    "browserName",
-    "browserVersion",
-    "browserEngineName",
-    "browserEngineVersion",
-    "osName",
-    "osVersion",
-    "osVersionName",
-    "platformType",
-    "platformName",
-] as const;
-
-export type BigfootFetcherHeaderName = typeof BIGFOOT_FETCHER_HEADER_NAMES[number];
-
-const PLATFORM_TYPE_ENV_KEYS = [
-    "npm_package_config_bigfootds_platformType",
-    "npm_package_platformType",
-    "platformType",
-    "PLATFORMTYPE",
-    "PLATFORM_TYPE",
-    "REACT_APP_PLATFORM_TYPE",
-    "REACT_APP_PLATFORMTYPE",
-    "VITE_PLATFORM_TYPE",
-    "VITE_PLATFORMTYPE",
-] as const;
-
-const PLATFORM_NAME_ENV_KEYS = [
-    "npm_package_config_bigfootds_platformName",
-    "npm_package_platformName",
-    "platformName",
-    "PLATFORMNAME",
-    "PLATFORM_NAME",
-    "REACT_APP_PLATFORM_NAME",
-    "REACT_APP_PLATFORMNAME",
-    "VITE_PLATFORM_NAME",
-    "VITE_PLATFORMNAME",
-] as const;
-
-const PRODUCT_NAME_ENV_KEYS = [
-    "npm_package_config_bigfootds_productName",
-    "npm_package_productName",
-    "productName",
-    "PRODUCTNAME",
-    "PRODUCT_NAME",
-    "REACT_APP_PRODUCT_NAME",
-    "REACT_APP_PRODUCTNAME",
-    "VITE_PRODUCT_NAME",
-    "VITE_PRODUCTNAME",
-] as const;
-
-const PRODUCT_VERSION_ENV_KEYS = [
-    "npm_package_config_bigfootds_productVersion",
-    "npm_package_productVersion",
-    "productVersion",
-    "PRODUCTVERSION",
-    "PRODUCT_VERSION",
-    "REACT_APP_PRODUCT_VERSION",
-    "REACT_APP_PRODUCTVERSION",
-    "VITE_PRODUCT_VERSION",
-    "VITE_PRODUCTVERSION",
-    "npm_package_version",
-] as const;
-
-const NODE_OS_NAMES: Record<string, string> = {
-    aix: "AIX",
-    darwin: "Darwin",
-    freebsd: "FreeBSD",
-    linux: "Linux",
-    openbsd: "OpenBSD",
-    sunos: "SunOS",
-    win32: "Windows_NT",
-};
+export { BIGFOOT_FETCHER_HEADER_NAMES };
+export type { BigfootDSConfig, BigfootFetcherHeaderName };
 
 interface NodeReportHeader {
     osName?: string;
@@ -174,14 +114,14 @@ function getInfoViaBrowser(): BigfootDSConfig {
             userAgentParsed.os.version || 
             bowserResult.os.versionName,
         platformType: 
-            readEnv(PLATFORM_TYPE_ENV_KEYS) ||
+            readEnv(BIGFOOT_FETCHER_PLATFORM_TYPE_ENV_KEYS) ||
             bowserResult.platform.type,
         platformName:
-            readEnv(PLATFORM_NAME_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PLATFORM_NAME_ENV_KEYS),
         productName:
-            readEnv(PRODUCT_NAME_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PRODUCT_NAME_ENV_KEYS),
         productVersion:
-            readEnv(PRODUCT_VERSION_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PRODUCT_VERSION_ENV_KEYS),
     }
 
     return result;
@@ -194,19 +134,19 @@ function getInfoViaNode(): BigfootDSConfig {
     const result: BigfootDSConfig = {
         osName: 
             reportHeader?.osName ||
-            (platform === undefined ? undefined : NODE_OS_NAMES[platform] ?? platform),
+            (platform === undefined ? undefined : BIGFOOT_FETCHER_NODE_OS_NAMES[platform] ?? platform),
         osVersion:
             reportHeader?.osRelease,
         osVersionName:
             reportHeader?.osVersion,
         platformType: 
-            readEnv(PLATFORM_TYPE_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PLATFORM_TYPE_ENV_KEYS),
         platformName:
-            readEnv(PLATFORM_NAME_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PLATFORM_NAME_ENV_KEYS),
         productName:
-            readEnv(PRODUCT_NAME_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PRODUCT_NAME_ENV_KEYS),
         productVersion:
-            readEnv(PRODUCT_VERSION_ENV_KEYS),
+            readEnv(BIGFOOT_FETCHER_PRODUCT_VERSION_ENV_KEYS),
     }
 
     return result;
@@ -253,26 +193,6 @@ function readProcessReportHeader(): NodeReportHeader | undefined {
     }
 
     return cachedNodeReportHeader ?? undefined;
-}
-
-
-export interface BigfootDSConfig {
-    // Set in package.json, access with properties like `process.env.npm_package_config_bigfootds_productName`:
-	productName?: string, 
-    productVersion?: string, // also retrievable as environment variable
-
-    // Retrievable via Bowser NPM package:
-    browserName?: string,
-    browserVersion?: string,
-    browserEngineName?: string,
-    browserEngineVersion?: string,
-    osName?: string,
-    osVersion?: string,
-    osVersionName?: string,
-    platformType?: string, // also retrievable as environment variable
-
-    // Retrievable as environment variables:
-    platformName?: string // set as environment variable, preferably at build time in a GitHub Action workflow
 }
 
 // In a browser with a correct meta HTML tag, this natively gets some device info: 

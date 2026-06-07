@@ -1,6 +1,6 @@
 {
   "name": "@bigfootds/bigfoot-fetcher",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "JavaScript fetch override for cohesive, consistent usage across various BigfootDS projects.",
   "type": "module",
   "main": "dist/index.js",
@@ -15,10 +15,12 @@
     }
   },
   "scripts": {
+    "prebuild": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "start": "node dist/index.js",
     "dev": "npm run build && npm run start",
     "test": "npm run build && node --test",
     "build": "tsc",
+    "prepack": "npm run build",
     "envcheck:ps": "echo %npm_package_config_bigfootds_productName%",
     "envcheck:bash": "echo ${npm_package_config_bigfootds_productName}"
   },
@@ -41,11 +43,12 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.1",
-    "typescript": "^5.7.2"
+    "@types/node": "^25.9.2",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
-    "bowser": "^2.11.0",
+    "@bigfootds/bigfootds-shared-data": "^2.0.0",
+    "bowser": "^2.14.1",
     "my-ua-parser": "^2.0.4"
   }
 }
