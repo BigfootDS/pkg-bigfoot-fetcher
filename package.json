@@ -1,6 +1,6 @@
 {
   "name": "@bigfootds/bigfoot-fetcher",
-  "version": "0.3.1",
+  "version": "0.3.0",
   "description": "JavaScript fetch override for cohesive, consistent usage across various BigfootDS projects.",
   "type": "module",
   "main": "dist/index.js",
