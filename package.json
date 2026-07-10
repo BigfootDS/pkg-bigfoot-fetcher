@@ -47,7 +47,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@bigfootds/bigfootds-shared-data": "^2.0.0",
+    "@bigfootds/bigfootds-shared-data": "3.0.0",
     "bowser": "^2.14.1",
     "my-ua-parser": "^2.0.4"
   }
